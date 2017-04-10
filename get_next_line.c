@@ -1,22 +1,21 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   get_next_line.c                                    :+:      :+:    :+:   */
+/*   get_next_line2.c                                   :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: malbanes <marvin@42.fr>                    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2017/01/06 18:29:13 by malbanes          #+#    #+#             */
-/*   Updated: 2017/01/09 16:02:42 by malbanes         ###   ########.fr       */
+/*   Created: 2017/01/17 11:29:54 by malbanes          #+#    #+#             */
+/*   Updated: 2017/04/10 20:35:30 by malbanes         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "get_next_line.h"
 #include <fcntl.h>
-#define BUFF_SIZE 10
+#include "get_next_line.h"
 
 int		cherche_char_c(char *s, char c)
 {
-	int i;
+	int	i;
 
 	i = 0;
 	while (s[i] != '\0')
@@ -28,89 +27,66 @@ int		cherche_char_c(char *s, char c)
 	return (-1);
 }
 
-int		get_next_line(const int fd, char **line)
+int		retour_get_next_line(t_struct *get, char ***line, char **s)
 {
-
-	char		*buff;
-	static char	*rest;
-	int			ret;
-	int			n;
-	char		*tmp;
-
-	if (!fd || fd < 1 || !line)
-		return(-1);
-	if (*line)
-		free(*line);
-	*line = ft_strnew(0);
-	//ft_putendl("rest debut fct :");
-	//ft_putendl(rest);
-	if (rest != NULL)
+	if (ft_strlen(get->tmp) > 0)
 	{
-		n = cherche_char_c(rest, '\n');
-		if (n == -1)
-		{
-			*line = ft_strjoin(*line, rest);
-			//ft_putendl("line + rest :");
-			//ft_putendl(*line);
-		}
-		else
-		{
-			//ft_putnbr(n);
-			//ft_putendl("line debut :");
-			*line = ft_strsub(rest, 0, n);
-			//ft_putendl(*line);
-			tmp = ft_strsub(rest, n + 1, ft_strlen(rest) - n + 1);
-			ft_memdel((void*)&rest);
-			rest = tmp;
-		//	ft_putendl("rest2:");
-			tmp = NULL;
-		//	ft_putendl(rest);
-		}
+		**line = get->tmp;
+		*s = NULL;
+		return (1);
 	}
-	if (!rest || n == -1)
-	{
-		//ft_putendl("boucle while :");
-		buff = ft_memalloc(BUFF_SIZE + 1);
-		while ((ret = read(fd, buff, BUFF_SIZE) > 0 && cherche_char_c(buff, '\n') == -1))
-		{
-			ft_putnbr(ret);
-			*line = ft_strjoin(*line, buff);
-		}
-		n = cherche_char_c(buff, '\n');
-		//ft_putnbr(n);
-		tmp = ft_memalloc(n + 1);
-		tmp = ft_strncpy(tmp, buff, n);
-		//ft_putstr("rest :");
-		//ft_putendl(tmp);
-		*line = ft_strjoin(*line, tmp);
-		ft_memdel ((void*)&tmp);
-		rest = ft_strsub(buff, n + 1, BUFF_SIZE - (n + 1));
-		//ft_putendl(rest);
-	}
-	ft_memdel ((void*)&buff);
-	ft_putendl(*line);
-	return (1);
-}
-
-int		main(int ac, char **av)
-{
-	int	fd;
-	char *str;
-
-	str = (char*)malloc(sizeof(char) * 1);
-	str[0] = '\0';
-	fd = open(av[1], O_RDONLY);
-	if (fd == -1)
-	{
-		ft_putstr("not open");
-		return (0);
-	}
-	get_next_line(fd, &str);
-	get_next_line(fd, &str);
-	get_next_line(fd, &str);
-	get_next_line(fd, &str);
-	get_next_line(fd, &str);
-	get_next_line(fd, &str);
-	get_next_line(fd, &str);
+	if (get->ret < 0)
+		return (-1);
+	free (**line);
+//	free (*s);
+	**line = NULL;
+	free (get->tmp);
 	return (0);
 }
+
+int		get_next_line(const int fd, char **line)
+{
+	static char	*s[1000000] = {NULL};
+	static t_struct	get;
+
+	get.fin = 3;
+	if (fd < 0 || fd > 1000000 || !line || get.fin == 0)
+		return (-1);
+	*line = NULL;
+	if (s[fd] == NULL)
+		s[fd] = ft_memalloc(BUFF_SIZE + 1);
+	get.tmp = ft_strncpy(ft_memalloc(BUFF_SIZE + 1), s[fd], BUFF_SIZE);
+	while (ft_strchr(get.tmp, '\n') == NULL)
+	{
+		if ((get.ret = read(fd, get.buff, BUFF_SIZE)) < 1)
+			return ((get.fin = retour_get_next_line(&get, &line, &s[fd])));
+		get.buff[get.ret] = '\0';
+		get.tmp2 = ft_strjoin(get.tmp, get.buff);
+		free(get.tmp);
+		get.tmp = get.tmp2;
+	}
+	*line = ft_strsub(get.tmp, 0,  cherche_char_c(get.tmp, '\n'));
+	if (ft_strchr(get.tmp, '\n'))
+		s[fd] = ft_strncpy(s[fd], ft_strchr(get.tmp, '\n') + 1,
+				BUFF_SIZE + 1);
+	free(get.tmp);
+
+	return (1);
+}
+/*
+int	main(int ac, char **av)
+{
+    int fd;
+    char *str;
+
+    fd = open(av[1], O_RDONLY);
+    while (get_next_line(fd, &str) != 0)
+	{
+        ft_putendl(str);
+		free(str);
+	}
+	ft_putendl("fin de lecture");
+    while (1)
+        fd = fd;
+    return(0);
+}*/
